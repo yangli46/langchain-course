@@ -31,7 +31,14 @@ Musk's political activities, views, and statements have made him a polarizing fi
     )
 
     # llm = ChatOllama(temperature=0, model="gemma3:270m")
-    llm = ChatOpenAI(temperature=0, model="gpt-5")
+    # llm = ChatOpenAI(temperature=0, model="gpt-5")
+    llm = ChatOpenAI(
+        temperature=0,
+        model="qwen-plus",  # 或 qwen-max、qwen3.8-max 等
+        base_url="https://ws-rj6hv31mttffnt48.cn-beijing.maas.aliyuncs.com/compatible-mode/v1",
+        api_key="sk-ws-H.PIMHEIX.nIdh.MEMCIC0uT6m8yrUXUHzC6GBd10Y5NWrQbHXBU-HX41nh1lyOAh8TAq2YF-RKpTxy9Up9MwDVlnJ9dOTDsvDxD8nfBSTC"
+    )
+
     chain = summary_prompt_template | llm
 
     response = chain.invoke(input={"information": information})
@@ -39,3 +46,6 @@ Musk's political activities, views, and statements have made him a polarizing fi
 
 if __name__ == "__main__":
     main()
+
+#https://ws-rj6hv31mttffnt48.cn-beijing.maas.aliyuncs.com/compatible-mode/v1
+#sk-ws-H.PIMHEIX.nIdh.MEMCIC0uT6m8yrUXUHzC6GBd10Y5NWrQbHXBU-HX41nh1lyOAh8TAq2YF-RKpTxy9Up9MwDVlnJ9dOTDsvDxD8nfBSTC
