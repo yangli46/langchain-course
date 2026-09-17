@@ -5,7 +5,6 @@ from langchain_ollama import ChatOllama
 
 load_dotenv()
 
-
 def main():
     print("Hello from langchain-course!")
     information = """
