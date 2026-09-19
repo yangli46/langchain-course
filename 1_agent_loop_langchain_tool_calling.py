@@ -6,6 +6,7 @@ from langchain.chat_models import init_chat_model
 from langchain.tools import tool
 from langchain_core.messages import HumanMessage, SystemMessage, ToolMessage
 from langsmith import traceable
+from langchain_openai import ChatOpenAI
 
 MAX_ITERATIONS = 10
 MODEL = "qwen3:1.7b"
@@ -40,7 +41,14 @@ def run_agent(question: str):
     tools = [get_product_price, apply_discount]
     tools_dict = {t.name: t for t in tools}
 
-    llm = init_chat_model(f"ollama:{MODEL}", temperature=0)
+    # llm = init_chat_model(f"ollama:{MODEL}", temperature=0)
+    # llm_with_tools = llm.bind_tools(tools)
+    llm = ChatOpenAI(
+        temperature=0,
+        model="qwen-plus",
+        base_url="https://ws-rj6hv31mttffnt48.cn-beijing.maas.aliyuncs.com/compatible-mode/v1",
+        api_key="sk-ws-H.PIMHEIX.nIdh.MEMCIC0uT6m8yrUXUHzC6GBd10Y5NWrQbHXBU-HX41nh1lyOAh8TAq2YF-RKpTxy9Up9MwDVlnJ9dOTDsvDxD8nfBSTC"
+    )
     llm_with_tools = llm.bind_tools(tools)
 
     print(f"Question: {question}")

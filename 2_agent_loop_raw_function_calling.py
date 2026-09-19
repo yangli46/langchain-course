@@ -2,15 +2,12 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
-import ollama
+from langchain_openai import ChatOpenAI
 from langsmith import traceable
 
 MAX_ITERATIONS = 10
-MODEL = "qwen3:1.7b"
 
-
-# --- Tools (LangChain @tool decorator) ---
-
+# --- Tools ---
 
 @traceable(run_type="tool")
 def get_product_price(product: str) -> float:
@@ -29,9 +26,7 @@ def apply_discount(price: float, discount_tier: str) -> float:
     discount = discount_percentages.get(discount_tier, 0)
     return round(price * (1 - discount / 100), 2)
 
-# Difference 2: Without @tool, we must MANUALLY define the JSON schema for each function.
-# This is exactly what LangChain's @tool decorator generates automatically
-# from the function's type hints and docstring.
+
 tools_for_llm = [
     {
         "type": "function",
@@ -71,41 +66,21 @@ tools_for_llm = [
 ]
 
 
-# NOTE: Ollama can also auto-generate these schemas if you pass the functions
-# directly as tools (similar to LangChain's @tool decorator):
-#   tools_for_llm = [get_product_price, apply_discount]
-# However, this requires your docstrings to follow the Google docstring format
-# so Ollama can parse parameter descriptions from the Args section. For example:
-#   def get_product_price(product: str) -> float:
-#       """Look up the price of a product in the catalog.
-#
-#       Args:
-#           product: The product name, e.g. 'laptop', 'headphones', 'keyboard'.
-#
-#       Returns:
-#           The price of the product, or 0 if not found.
-#       """
-# We keep the manual JSON version here so you can see what @tool hides from you.
-
-# --- Helper: traced Ollama call ---
-# Difference 3: Without LangChain, we must manually trace LLM calls for LangSmith.
+llm = ChatOpenAI(
+    temperature=0,
+    model="qwen-plus",
+    base_url="https://ws-rj6hv31mttffnt48.cn-beijing.maas.aliyuncs.com/compatible-mode/v1",
+    api_key="sk-ws-H.PIMHEIX.nIdh.MEMCIC0uT6m8yrUXUHzC6GBd10Y5NWrQbHXBU-HX41nh1lyOAh8TAq2YF-RKpTxy9Up9MwDVlnJ9dOTDsvDxD8nfBSTC"
+)
+llm_with_tools = llm.bind_tools(tools_for_llm)
 
 
-@traceable(name="Ollama Chat", run_type="llm")
-def ollama_chat_traced(messages):
-    return ollama.chat(model=MODEL, tools=tools_for_llm, messages=messages)
-
-# --- Agent Loop ---
-
-
-@traceable(name="Ollama Agent Loop")
+@traceable(name="ChatOpenAI Agent Loop")
 def run_agent(question: str):
     tools_dict = {
         "get_product_price": get_product_price,
         "apply_discount": apply_discount,
     }
-
-
 
     print(f"Question: {question}")
     print("=" * 60)
@@ -135,22 +110,19 @@ def run_agent(question: str):
     for iteration in range(1, MAX_ITERATIONS + 1):
         print(f"\n--- Iteration {iteration} ---")
 
-        # Difference 5: ollama.chat() directly instead of llm_with_tools.invoke()
-        response = ollama_chat_traced(messages=messages)
-        ai_message = response.message
+        ai_message = llm_with_tools.invoke(messages)
 
         tool_calls = ai_message.tool_calls
 
-        # If no tool calls, this is the final answer
         if not tool_calls:
             print(f"\nFinal Answer: {ai_message.content}")
             return ai_message.content
 
-        # Process only the FIRST tool call — force one tool per iteration
         tool_call = tool_calls[0]
-        # Difference 6: Attribute access (.function.name) instead of dict access (.get("name"))
-        tool_name = tool_call.function.name
-        tool_args = tool_call.function.arguments
+        # 【修正】用字典访问，不是属性访问
+        tool_name = tool_call["name"]
+        tool_args = tool_call["args"]
+        tool_call_id = tool_call["id"]
 
         print(f"  [Tool Selected] {tool_name} with args: {tool_args}")
 
@@ -158,9 +130,7 @@ def run_agent(question: str):
         if tool_to_use is None:
             raise ValueError(f"Tool '{tool_name}' not found")
 
-        # Difference 7: Direct function call instead of tool.invoke()
         observation = tool_to_use(**tool_args)
-
 
         print(f"  [Tool Result] {observation}")
 
@@ -169,6 +139,7 @@ def run_agent(question: str):
             {
                 "role": "tool",
                 "content": str(observation),
+                "tool_call_id": tool_call_id,
             }
         )
 
@@ -177,6 +148,6 @@ def run_agent(question: str):
 
 
 if __name__ == "__main__":
-    print("Hello LangChain Agent (.bind_tools)!")
+    print("Hello ChatOpenAI Agent!")
     print()
     result = run_agent("What is the price of a laptop after applying a gold discount?")
